@@ -4,6 +4,9 @@ import org.springframework.core.io.ClassPathResource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Repository;
 
+import javax.persistence.EntityManager;
+import javax.persistence.PersistenceContext;
+import javax.persistence.Query;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
@@ -15,25 +18,13 @@ import java.util.stream.Collectors;
 @Repository
 public class OrdersRepository {
 
-    private final String sqlText;
-    private final NamedParameterJdbcTemplate namedParameterJdbcTemplate;
-
-    public OrdersRepository(NamedParameterJdbcTemplate namedParameterJdbcTemplate) {
-        this.sqlText = read("productName.sql");
-        this.namedParameterJdbcTemplate = namedParameterJdbcTemplate;
-    }
-
-    private static String read(String scriptFileName) {
-        try (InputStream is = new ClassPathResource(scriptFileName).getInputStream();
-             BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(is))) {
-            return bufferedReader.lines().collect(Collectors.joining("\n"));
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
-    }
+    @PersistenceContext
+    private EntityManager entityManager;
 
     public List<String> getProductName(String name) {
-        return namedParameterJdbcTemplate.queryForList(sqlText, Map.of("name", name), String.class);
+        Query query = entityManager.createQuery("select o.product_name from Order o join o.customer c WHERE c.name = :name", String.class);
+        query.setParameter("name", name);
+        return query.getResultList();
     }
 
 }
